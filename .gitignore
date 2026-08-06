@@ -1,0 +1,24 @@
+# Локальная SQLite-база данных
+scheduler.db
+scheduler.db-journal
+scheduler.db-shm
+scheduler.db-wal
+
+# Собранные Go-бинарники и тестовые артефакты
+scheduler
+*.exe
+*.test
+*.out
+coverage.out
+
+# Локальные переменные окружения
+.env
+.env.*
+!.env.example
+
+# Файлы и каталоги IDE
+.idea/
+.vscode/
+
+# Системные файлы
+.DS_Store
