@@ -30,4 +30,3 @@ jobs:
         sleep 100
         go test -run ^TestApp$ ./tests
         
-        
