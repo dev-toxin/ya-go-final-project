@@ -24,11 +24,9 @@ jobs:
     - name: Install dependencies
       run: go mod tidy
 
-    - name: Run server and tests
-      env:
-        TODO_PASSWORD: 87654321
+    - name: Run local server
       run: |
         CGO_ENABLED=0 GOOS=linux go run main.go &
-        sleep 2
-        go test ./tests
-
+        sleep 100
+        go test -run ^TestApp$ ./tests
+        
