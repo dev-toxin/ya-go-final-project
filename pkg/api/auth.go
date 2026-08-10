@@ -4,7 +4,6 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -21,45 +20,47 @@ type signInResponse struct {
 	Token string `json:"token"`
 }
 
-func password() string {
-	return os.Getenv("TODO_PASSWORD")
+// authConfig хранит пароль, прочитанный один раз при запуске сервера.
+type authConfig struct {
+	password string
 }
 
-func signInHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeJSON(w, map[string]string{"error": "метод не поддерживается"})
-		return
-	}
-	if password() == "" {
-		writeJSON(w, map[string]string{"error": "аутентификация не настроена"})
-		return
-	}
+func signInHandler(config authConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			writeError(w, http.StatusMethodNotAllowed, "метод не поддерживается")
+			return
+		}
+		if config.password == "" {
+			writeError(w, http.StatusNotFound, "аутентификация не настроена")
+			return
+		}
 
-	var request signInRequest
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		writeJSON(w, map[string]string{"error": "некорректный JSON"})
-		return
-	}
-	if subtle.ConstantTimeCompare([]byte(request.Password), []byte(password())) != 1 {
-		writeJSON(w, map[string]string{"error": "неверный пароль"})
-		return
-	}
+		var request signInRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			writeError(w, http.StatusBadRequest, "некорректный JSON")
+			return
+		}
+		if subtle.ConstantTimeCompare([]byte(request.Password), []byte(config.password)) != 1 {
+			writeError(w, http.StatusUnauthorized, "неверный пароль")
+			return
+		}
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenLifetime)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-	}).SignedString([]byte(password()))
-	if err != nil {
-		writeJSON(w, map[string]string{"error": "не удалось создать токен"})
-		return
+		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(tokenLifetime)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		}).SignedString([]byte(config.password))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "не удалось создать токен")
+			return
+		}
+		writeJSON(w, signInResponse{Token: token})
 	}
-	writeJSON(w, signInResponse{Token: token})
 }
 
-func auth(next http.Handler) http.Handler {
+func auth(config authConfig, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		secret := password()
-		if secret == "" {
+		if config.password == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -79,7 +80,7 @@ func auth(next http.Handler) http.Handler {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, jwt.ErrSignatureInvalid
 			}
-			return []byte(secret), nil
+			return []byte(config.password), nil
 		})
 		if err != nil {
 			http.Error(w, "authentication required", http.StatusUnauthorized)

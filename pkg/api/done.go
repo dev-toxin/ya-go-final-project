@@ -8,10 +8,15 @@ import (
 )
 
 func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeError(w, http.StatusMethodNotAllowed, "метод не поддерживается")
+		return
+	}
+
 	id := r.URL.Query().Get("id")
 	task, err := db.GetTask(id)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusNotFound, "задача не найдена")
 		return
 	}
 
@@ -25,7 +30,7 @@ func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusInternalServerError, "не удалось выполнить задачу")
 		return
 	}
 	writeJSON(w, map[string]string{})

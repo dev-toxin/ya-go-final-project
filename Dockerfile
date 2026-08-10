@@ -11,5 +11,4 @@ WORKDIR /app
 COPY --from=build /scheduler /scheduler
 COPY web ./web
 
-EXPOSE 7540
 ENTRYPOINT ["/scheduler"]

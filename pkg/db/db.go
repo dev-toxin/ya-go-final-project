@@ -3,7 +3,7 @@ package db
 
 import (
 	"database/sql"
-	"errors"
+
 	"fmt"
 	"os"
 
@@ -27,9 +27,7 @@ var DB *sql.DB
 // Init открывает SQLite-файл. Если файл ещё не существует, создаёт таблицу scheduler
 // и индекс для сортировки задач по дате.
 func Init(dbFile string) error {
-	_, err := os.Stat(dbFile)
-	install := errors.Is(err, os.ErrNotExist)
-	if err != nil && !install {
+	if _, err := os.Stat(dbFile); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("проверка файла базы данных: %w", err)
 	}
 
@@ -38,9 +36,6 @@ func Init(dbFile string) error {
 		return fmt.Errorf("открытие базы данных: %w", err)
 	}
 
-	if install {
-		// Файл создан SQLite при первом открытии; схему добавляем ниже.
-	}
 	if _, err = database.Exec(schema); err != nil {
 		database.Close()
 		return fmt.Errorf("создание схемы базы данных: %w", err)

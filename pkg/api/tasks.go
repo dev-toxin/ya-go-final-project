@@ -14,6 +14,11 @@ type tasksResponse struct {
 }
 
 func tasksHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "метод не поддерживается")
+		return
+	}
+
 	search := r.URL.Query().Get("search")
 	if date, err := time.Parse("02.01.2006", search); err == nil {
 		search = date.Format(dateLayout)
@@ -21,7 +26,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 
 	tasks, err := db.Tasks(tasksLimit, search)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeError(w, http.StatusInternalServerError, "не удалось получить список задач")
 		return
 	}
 	writeJSON(w, tasksResponse{Tasks: tasks})

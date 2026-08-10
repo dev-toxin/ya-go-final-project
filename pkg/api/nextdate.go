@@ -112,7 +112,9 @@ func nextByMonthDays(now, date time.Time, parts []string) (string, error) {
 		}
 	}
 
-	for {
+	// В 400-летнем григорианском цикле календарь повторяется. Ограничение
+	// гарантирует возврат ошибки для невыполнимых сочетаний вроде "m 31 2".
+	for i := 0; i < 366*400; i++ {
 		date = date.AddDate(0, 0, 1)
 		if !afterNow(date, now) || !months[int(date.Month())] {
 			continue
@@ -123,6 +125,7 @@ func nextByMonthDays(now, date time.Time, parts []string) (string, error) {
 			return date.Format(dateLayout), nil
 		}
 	}
+	return "", fmt.Errorf("правило не содержит существующей даты")
 }
 
 func parseValues(value string, min, max int) (map[int]bool, error) {
@@ -141,6 +144,11 @@ func parseValues(value string, min, max int) (map[int]bool, error) {
 }
 
 func nextDateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	now := time.Now()
 	if nowParam := r.FormValue("now"); nowParam != "" {
 		parsedNow, err := time.Parse(dateLayout, nowParam)

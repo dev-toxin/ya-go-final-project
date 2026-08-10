@@ -17,9 +17,12 @@ func main() {
 	}
 
 	if err := db.Init(dbFile); err != nil {
-		log.Fatal(err)
+		log.Printf("инициализация базы данных: %v", err)
+		return
 	}
 	defer db.DB.Close()
 
-	log.Fatal(server.Start())
+	if err := server.Start(); err != nil {
+		log.Printf("остановка сервера: %v", err)
+	}
 }
